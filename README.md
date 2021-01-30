@@ -1,1 +1,3 @@
-"# Simple-Todo" 
+# Simple Todo
+
+Simple Android todo app from codepath.
