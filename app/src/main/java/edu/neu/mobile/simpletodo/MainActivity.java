@@ -4,6 +4,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.content.Intent;
 import android.os.Bundle;
 import org.apache.commons.io.FileUtils;
 
@@ -22,8 +23,11 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    List<String> items;
+    public static final String KEY_ITEM_TEXT = "item_text";
+    public static final String KEY_ITEM_POSITION = "item_position";
+    public static final int EDIT_TEXT_CODE = 20;
 
+    List<String> items;
     Button btnAdd;
     EditText etItem;
     RecyclerView rvItems;
@@ -38,9 +42,12 @@ public class MainActivity extends AppCompatActivity {
         etItem = findViewById(R.id.edText);
         rvItems = findViewById(R.id.rvItems);
 
+        //load the saved items
         loadItems();
 
-        //创建一个onLongClickListener实例，其中方法也定义一下（删除并且toast提示）
+        //创建一个onLongClickListener实例，创建interfacce实例时，需要对其中的抽象方法进行implement
+        //implement要在这里写因为，但是position需要在itemAdaptor里获取
+        // 其中方法也定义一下（删除并且toast提示）
         ItemsAdapter.OnLongClickListener onLongClickListener = new ItemsAdapter.OnLongClickListener() {
             @Override
             public void onItemLongClicked(int position) {
@@ -50,11 +57,30 @@ public class MainActivity extends AppCompatActivity {
                 //notify the adapter，删除
                 itemsAdapter.notifyItemRemoved(position);
                 Toast.makeText(getApplicationContext(), "Item was removed", Toast.LENGTH_SHORT).show();
+                //save the updated items in arrayList
                 saveItems();
             }
         };
 
-        itemsAdapter = new ItemsAdapter(items, onLongClickListener);
+        ItemsAdapter.OnClickListener onClickListener = new ItemsAdapter.OnClickListener() {
+            @Override
+            public void onItemClicked(int position) {
+                Log.d("MainActivity", "Single click at position: " + position);
+                //点击以后，用intent跳转activity
+
+                //1. create new activity (Intent!), 指名从哪到哪
+                Intent i = new Intent(MainActivity.this, EditActivity.class);
+
+                //2. pass data being edit, 传数据过去
+                i.putExtra(KEY_ITEM_TEXT, items.get(position));
+                i.putExtra(KEY_ITEM_POSITION, position);
+
+                //3. display activity,接受intent，和定义的一个code
+                startActivityForResult(i, EDIT_TEXT_CODE);
+            }
+        };
+
+        itemsAdapter = new ItemsAdapter(items, onLongClickListener, onClickListener);
         rvItems.setAdapter(itemsAdapter);
         rvItems.setLayoutManager(new LinearLayoutManager(this));
 
@@ -69,10 +95,35 @@ public class MainActivity extends AppCompatActivity {
                 itemsAdapter.notifyItemInserted(items.size()-1);
                 etItem.setText("");
                 Toast.makeText(getApplicationContext(), "Item was added", Toast.LENGTH_SHORT).show();
+                //save the updated items in arrayList
                 saveItems();
             }
         });
+    }
 
+    //handle result of the edit activity
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        //确认requestCode时对上的并且返回result是ok的
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode == RESULT_OK && requestCode == EDIT_TEXT_CODE) {
+            //get updated text value
+            String updatedText = data.getStringExtra(KEY_ITEM_TEXT);
+            //extract original position of edited item
+            int updatedPosition = data.getExtras().getInt(KEY_ITEM_POSITION);
+
+            //update the model at the right position with new item text
+            items.set(updatedPosition, updatedText);
+            //notify adaptor
+            itemsAdapter.notifyItemChanged(updatedPosition);
+
+            //persist the changes
+            Toast.makeText(getApplicationContext(), "Item has been updated", Toast.LENGTH_LONG).show();
+            saveItems();
+
+        } else {
+            Log.w("MainActivity", "Unknown call to onActivity result");
+        }
     }
 
     private File getDataFile() {

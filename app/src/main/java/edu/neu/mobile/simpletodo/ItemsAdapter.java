@@ -14,17 +14,23 @@ import java.util.List;
 //responsible for display data from model into row in the recycler view
 public class ItemsAdapter extends RecyclerView.Adapter<ItemsAdapter.ViewHolder>{
 
+    public interface OnClickListener {
+        void onItemClicked(int position);
+    }
     public interface OnLongClickListener {
         void onItemLongClicked(int position);
     }
 
     List<String> items;
+    //都是在上面定义的interface
     OnLongClickListener onLongClickListener;
+    OnClickListener onClickListener;
 
-    //constructor
-    public ItemsAdapter(List<String> items, OnLongClickListener onLongClickListener) {
+    //constructor, 里面主要是用来和 MainActivity进行的操作进行沟通的！！！！
+    public ItemsAdapter(List<String> items, OnLongClickListener onLongClickListener, OnClickListener onClickListener) {
         this.items = items;
         this.onLongClickListener = onLongClickListener;
+        this.onClickListener = onClickListener;
     }
 
     @NonNull
@@ -65,6 +71,7 @@ public class ItemsAdapter extends RecyclerView.Adapter<ItemsAdapter.ViewHolder>{
         }
 
         //update view inside of the view holder with this data
+        //在viewHolder里添加点击listener事件
         public void bind(String item) {
             tvItem.setText(item);
 
@@ -75,6 +82,14 @@ public class ItemsAdapter extends RecyclerView.Adapter<ItemsAdapter.ViewHolder>{
                     // Notify the listener which position was long pressed.
                     onLongClickListener.onItemLongClicked(getAdapterPosition());
                     return true;
+                }
+            });
+
+            //添加点击转移到新activity事件,同样添加一个interface
+            tvItem.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    onClickListener.onItemClicked(getAdapterPosition());
                 }
             });
         }
